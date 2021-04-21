@@ -67,7 +67,7 @@ data writesTo {M : Set l1 -> Set l2} {{i : Monad M}} (v : A) (m : M B) : Set (ls
 nwt : {{_ : Eq K}} -> (v : K) -> (m : FreeMonad A) -> ((noWritesTo v m) or (writesTo v m))
 nwt v (returnF x) = left (ret-prop refl)
 nwt v (x >>=F y) with nwt v x
-... | left x1  = left (bind-prop {!!} {!!} {!!} {!!} {!!})
+... | left x1  = left (bind-prop x y refl x1 {!!})
 ... | _ = right todo
 
 
