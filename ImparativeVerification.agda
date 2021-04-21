@@ -4,10 +4,23 @@ open import Agda.Primitive renaming (_⊔_ to _~U~_)
 
 variable
   l l1 l2 l3 l4 : Level
-  A B C : Set l
+  A B C K J L : Set l
+
+data Bool : Set where
+  true : Bool
+  false : Bool
+
+data _or_ (A B : Set l) : Set (lsuc l) where
+  left : A -> A or B
+  right : B -> A or B
 
 data _===_ {l : Level} {A : Set l} (a : A) : A -> Set l where
   refl : a === a
+
+record Eq (A : Set l) : Set (lsuc l) where
+  field
+    _==_ : A -> A -> Bool
+open Eq {{...}} public
 
 data <U> {l : Level} : Set l where
   unit : <U>
@@ -45,6 +58,20 @@ data noWritesTo {M : Set l1 -> Set l2} {{i : Monad M}} (v : A) (m : M B) : Set (
     noWritesTo v m1 ->
     ((c : C) -> noWritesTo v (m2 c)) ->
     noWritesTo v m
+
+data writesTo {M : Set l1 -> Set l2} {{i : Monad M}} (v : A) (m : M B) : Set (lsuc (l1 ~U~ l2)) where
+  todo : writesTo v m
+
+
+
+nwt : {{_ : Eq K}} -> (v : K) -> (m : FreeMonad A) -> ((noWritesTo v m) or (writesTo v m))
+nwt v (returnF x) = left (ret-prop refl)
+nwt v (x >>=F y) with nwt v x
+... | left x1  = left (bind-prop {!!} {!!} {!!} {!!} {!!})
+... | _ = right todo
+
+
+
 
 module TestProof {M : Set l1 -> Set l2} {V : Set l1 -> Set l1}  where
   test : {{mon : Monad M}} {{_ : MonadMem M V}} -> {a : A} {v : V A} -> noWritesTo {{mon}} v (return a >>= \x -> return a)
