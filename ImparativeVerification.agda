@@ -2,44 +2,62 @@ module ImparativeVerification where
 
 open import Agda.Primitive renaming (_⊔_ to _~U~_)
 
+variable
+  l l1 l2 l3 l4 : Level
+  A B C : Set l
 
-data Nat : Set where
-  zero : Nat
-  succ : Nat -> Nat
-
-_+_ : Nat -> Nat -> Nat
-zero + b = b
-succ a + b = succ (a + b)
+data _===_ {l : Level} {A : Set l} (a : A) : A -> Set l where
+  refl : a === a
 
 data <U> {l : Level} : Set l where
   unit : <U>
 
-variable
-  l l1 l2 l3 l4 : Level
-  A B C : Set l
+record Monad (M : Set l1 -> Set l2) : Set (lsuc (l1 ~U~ l2)) where
+  field
+    return : A -> M A
+    _>>=_ : M A -> (A -> M B) -> M B
+open Monad {{...}} public
+
+data FreeMonad {l : Level} : (Set l) -> Set (lsuc l) where
+  returnF : {A : Set l} -> A -> FreeMonad A
+  _>>=F_ : {A : Set l} -> FreeMonad A -> (A -> FreeMonad B) -> FreeMonad B
+
+instance
+  FreeMonadMonad : Monad (FreeMonad {l})
+  return {{FreeMonadMonad}} = returnF
+  _>>=_ {{FreeMonadMonad}} = _>>=F_
 
 record MonadMem (M : Set l1 -> Set l2) (V : Set l1 -> Set l1) : Set (lsuc (l1 ~U~ l2)) where
   field
     new : M (V A)
     read : V A -> M A
     write : V A -> A -> M <U>
-
+open MonadMem {{...}} public
+{-}
 record MemProperties {M : Set l1 -> Set l2} {V : Set l1 -> Set l1} {{_ : MonadMem {l1} {l2} M V}} : Set (lsuc (l1 ~U~ l2)) where
   field
     read-after-write : write v a >>= noWritesTo v >>= read v === return a
+-}
 
-
-data noWritesTo (v : A) where
-  ret-prop : (return <U> : _) -> noWritesTo v
-  bind-prop : (m1 : M A) (m2 : A -> M B) -> 
+data noWritesTo {M : Set l1 -> Set l2} {{i : Monad M}} (v : A) (m : M B) : Set (lsuc (l1 ~U~ l2)) where
+  ret-prop : {b : B} -> (m === return b) -> noWritesTo v m
+  bind-prop : (m1 : M C) (m2 : C -> M B) -> (m === (m1 >>= m2)) ->
     noWritesTo v m1 ->
-    (\(a : A) -> AnswerSet m2 s -> a in s -> noWritesTo v (m2 a)) -> noWritesTo (m1 >>= m2)
+    ((c : C) -> noWritesTo v (m2 c)) ->
+    noWritesTo v m
 
+module TestProof {M : Set l1 -> Set l2} {V : Set l1 -> Set l1}  where
+  test : {{mon : Monad M}} {{_ : MonadMem M V}} -> {a : A} {v : V A} -> noWritesTo {{mon}} v (return a >>= \x -> return a)
+  test {{_}} {{_}} {a} {v} = bind-prop (return a) (\ _ -> return a) refl (ret-prop refl) (\ _ -> ret-prop refl)
+  test2 : A -> FreeMonad A
+  test2 a = return a
+
+{-}
 data AnswerSet M S where
   retSet : (a : A) -> AnswerSet (return a) [a]
   bind : (m1 : _) -> (m2 : _) -> AnswerSet m1 s' ->
           AnswerSet (m1 >>= m2) (Union (for s' (\s -> m2 s)))
-
+-}
 
 
 
